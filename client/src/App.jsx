@@ -31,7 +31,6 @@ export default function App() {
   const [showQrPopup, setShowQrPopup] = useState(false);
 
   const [companyName, setCompanyName] = useState("");
-  const [companyEmail, setCompanyEmail] = useState("");
   const [companyPassword, setCompanyPassword] = useState("");
   const [companyToken, setCompanyToken] = useState("");
   const [companyData, setCompanyData] = useState(null);
@@ -50,6 +49,30 @@ export default function App() {
   const [cvFile, setCvFile] = useState(null);
 
   const progress = useMemo(() => Math.round((step / TOTAL_STEPS) * 100), [step]);
+
+  function getDomainFromEmail(email) {
+    const value = String(email || "").trim().toLowerCase();
+    const atIndex = value.lastIndexOf("@");
+    if (atIndex <= 0) return "";
+    return value.slice(atIndex + 1);
+  }
+
+  function getCompanyWebsite(company) {
+    const explicitWebsite = String(company?.websiteUrl || "").trim();
+    if (explicitWebsite) return explicitWebsite;
+    const domain = getDomainFromEmail(company?.email || "");
+    return domain ? `https://${domain}` : "";
+  }
+
+  function getCompanyLogo(company) {
+    const explicitLogo = String(company?.logoUrl || "").trim();
+    if (explicitLogo) return explicitLogo;
+    const domain = getDomainFromEmail(company?.email || "");
+    if (domain) {
+      return `https://www.google.com/s2/favicons?sz=128&domain=${encodeURIComponent(domain)}`;
+    }
+    return `https://ui-avatars.com/api/?name=${encodeURIComponent(company?.name || "Empresa")}&background=d34600&color=fff`;
+  }
 
   function readStoredSession() {
     try {
@@ -231,6 +254,19 @@ export default function App() {
       active = false;
     };
   }, [routeMode, routeSlug, routeToken]);
+
+  async function refreshStudentDashboard() {
+    if (routeMode !== "dashboard" || !routeSlug || !routeToken) return;
+    setRouteLoading(true);
+    try {
+      const data = await getStudentDashboard(routeSlug, routeToken);
+      setDashboardData(data);
+    } catch {
+      // sem bloqueio
+    } finally {
+      setRouteLoading(false);
+    }
+  }
 
   async function refreshCompanyDashboard(token) {
     const data = await getCompanyDashboard(token);
@@ -440,8 +476,8 @@ export default function App() {
 
   async function handleCompanyLogin(event) {
     event.preventDefault();
-    if (!companyEmail.trim()) {
-      setCompanyError("Indica pelo menos o email da empresa.");
+    if (!companyName.trim() || !companyPassword.trim()) {
+      setCompanyError("Indica nome e password da empresa.");
       return;
     }
 
@@ -450,9 +486,8 @@ export default function App() {
 
     try {
       const result = await companyLogin({
-        name: companyName.trim() || "Empresa",
-        email: companyEmail.trim(),
-        password: companyPassword || "empresa12345"
+        name: companyName.trim(),
+        password: companyPassword.trim()
       });
 
       setCompanyToken(result.token);
@@ -470,8 +505,12 @@ export default function App() {
     setCompanyToken("");
     setCompanyData(null);
     setCompanyName("");
-    setCompanyEmail("");
     setCompanyPassword("");
+  }
+
+  function closeStudentQrPopup() {
+    setShowQrPopup(false);
+    refreshStudentDashboard();
   }
 
   return (
@@ -552,11 +591,34 @@ export default function App() {
                   {(dashboardData.scans?.length || 0) > 0 ? (
                     <>
                       <p className="list-title">Últimas empresas que fizeram leitura</p>
-                      <div className="scan-chips">
+                      <div className="company-feed-grid">
                         {dashboardData.scans.slice(0, 4).map((scan) => (
-                          <article className="scan-chip" key={scan.id}>
-                            <h4>{scan.company?.name || "Empresa"}</h4>
-                            <small>{new Date(scan.scannedAt).toLocaleString("pt-PT")}</small>
+                          <article className="company-feed-card" key={scan.id}>
+                            <div className="company-feed-head">
+                              <img
+                                src={getCompanyLogo(scan.company)}
+                                alt={`Logo de ${scan.company?.name || "Empresa"}`}
+                                className="company-logo"
+                              />
+                              <div>
+                                <h4>{scan.company?.name || "Empresa"}</h4>
+                                <small>{new Date(scan.scannedAt).toLocaleString("pt-PT")}</small>
+                              </div>
+                            </div>
+                            {getCompanyWebsite(scan.company) ? (
+                              <a
+                                className="secondary-button compact-button"
+                                href={getCompanyWebsite(scan.company)}
+                                target="_blank"
+                                rel="noreferrer"
+                              >
+                                Saber mais
+                              </a>
+                            ) : (
+                              <button type="button" className="secondary-button compact-button" disabled>
+                                Sem site
+                              </button>
+                            )}
                           </article>
                         ))}
                       </div>
@@ -577,7 +639,7 @@ export default function App() {
               {!companyToken ? (
                 <form className="form-flow" onSubmit={handleCompanyLogin}>
                   <h2 className="form-title">Login empresa</h2>
-                  <p className="form-subtitle">Entrada simples para já (sem validação estrita).</p>
+                  <p className="form-subtitle">Acesso para empresas pré-configuradas.</p>
 
                   <label className="field">
                     Nome da empresa
@@ -589,23 +651,12 @@ export default function App() {
                   </label>
 
                   <label className="field">
-                    Email
-                    <input
-                      type="email"
-                      value={companyEmail}
-                      onChange={(e) => setCompanyEmail(e.target.value)}
-                      placeholder="rh@empresa.pt"
-                      required
-                    />
-                  </label>
-
-                  <label className="field">
                     Password
                     <input
                       type="password"
                       value={companyPassword}
                       onChange={(e) => setCompanyPassword(e.target.value)}
-                      placeholder="Qualquer valor"
+                      placeholder="Password da empresa"
                     />
                   </label>
 
@@ -636,13 +687,43 @@ export default function App() {
 
                   {(companyData?.scans?.length || 0) > 0 ? (
                     <>
-                      <p className="list-title">Alunos lidos por esta empresa</p>
-                      <div className="scan-chips">
+                      <p className="list-title">Alunos lidos</p>
+                      <div className="scan-chips company-students-grid">
                         {companyData.scans.map((scan) => (
-                          <article className="scan-chip" key={scan.id}>
+                          <article className="scan-chip company-student-card" key={scan.id}>
                             <h4>{scan.student?.name || "Aluno"}</h4>
                             <small>{scan.student?.institutionalEmail || "Sem email"}</small>
-                            <small>{new Date(scan.scannedAt).toLocaleString("pt-PT")}</small>
+                            <div className="student-actions-row">
+                              {scan.student?.linkedinUrl ? (
+                                <a
+                                  className="secondary-button compact-button"
+                                  href={scan.student.linkedinUrl}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                >
+                                  LinkedIn
+                                </a>
+                              ) : (
+                                <button type="button" className="secondary-button compact-button" disabled>
+                                  Sem LinkedIn
+                                </button>
+                              )}
+
+                              {scan.student?.hasCv ? (
+                                <a
+                                  className="start-button compact-button"
+                                  href={`${apiUrl}/students/${scan.student.slug}/cv`}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                >
+                                  Descarregar CV
+                                </a>
+                              ) : (
+                                <button type="button" className="start-button compact-button" disabled>
+                                  Sem CV
+                                </button>
+                              )}
+                            </div>
                           </article>
                         ))}
                       </div>
@@ -787,12 +868,12 @@ export default function App() {
       ) : null}
 
       {showQrPopup && dashboardData?.qrCodeDataUrl ? (
-        <div className="modal-overlay" role="dialog" aria-modal="true" onClick={() => setShowQrPopup(false)}>
+        <div className="modal-overlay" role="dialog" aria-modal="true" onClick={closeStudentQrPopup}>
           <div className="modal-card" onClick={(e) => e.stopPropagation()}>
             <span className="event-badge">QR code</span>
             <h3>{dashboardData.student?.name}</h3>
             <img src={dashboardData.qrCodeDataUrl} alt="QR code do aluno" className="qr-preview" />
-            <button type="button" className="secondary-button" onClick={() => setShowQrPopup(false)}>
+            <button type="button" className="secondary-button" onClick={closeStudentQrPopup}>
               Fechar
             </button>
           </div>

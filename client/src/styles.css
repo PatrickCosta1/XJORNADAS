@@ -355,6 +355,68 @@ body {
   font-weight: 600;
 }
 
+.company-feed-grid {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.company-feed-card {
+  background: #fff;
+  border: 1px solid #f5d2be;
+  border-radius: 14px;
+  padding: 0.7rem;
+  display: grid;
+  gap: 0.6rem;
+}
+
+.company-feed-head {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.company-feed-head h4 {
+  color: #7c2d12;
+  font-size: 0.98rem;
+}
+
+.company-feed-head small {
+  color: #64748b;
+  font-weight: 600;
+}
+
+.company-logo {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: 1px solid #f3cbb5;
+  background: #fff7f2;
+}
+
+.compact-button {
+  min-height: 40px;
+  width: 100%;
+  max-width: 100%;
+  padding: 0.6rem 0.8rem;
+  font-size: 0.9rem;
+  text-align: center;
+  text-decoration: none;
+}
+
+.company-students-grid {
+  max-height: 34dvh;
+}
+
+.company-student-card {
+  gap: 0.45rem;
+}
+
+.student-actions-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
 .floating-qr-button {
   position: fixed;
   right: 1rem;
@@ -444,6 +506,10 @@ body {
   }
 
   .home-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .student-actions-row {
     grid-template-columns: 1fr;
   }
 
