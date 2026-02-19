@@ -408,7 +408,7 @@ export default function App() {
   function extractSlugFromQr(rawValue) {
     try {
       const url = new URL(rawValue);
-      const path = url.pathname.replace(/\/+$/, "");
+      const path = url.pathname.replace(/\/{2,}/g, "/").replace(/\/+$/, "");
       const profileMatch = path.match(/^\/p\/([^/]+)$/);
       if (profileMatch) return decodeURIComponent(profileMatch[1]);
       return "";

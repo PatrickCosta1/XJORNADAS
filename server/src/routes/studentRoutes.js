@@ -33,11 +33,13 @@ function normalizeLinkedin(url) {
 }
 
 function getPublicProfileUrl(slug) {
-  return `${config.appBaseUrl}/p/${slug}`;
+  const base = String(config.appBaseUrl || "").replace(/\/+$/, "");
+  return `${base}/p/${slug}`;
 }
 
 function getDashboardUrl(slug, token) {
-  return `${config.appBaseUrl}/student/${slug}/dashboard?token=${token}`;
+  const base = String(config.appBaseUrl || "").replace(/\/+$/, "");
+  return `${base}/student/${slug}/dashboard?token=${token}`;
 }
 
 router.post("/", upload.single("cv"), async (req, res) => {
