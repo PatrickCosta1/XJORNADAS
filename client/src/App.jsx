@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import jsQR from "jsqr";
 import {
   apiUrl,
   companyLogin,
@@ -329,21 +330,42 @@ export default function App() {
           await videoRef.current.play();
         }
 
-        if (!("BarcodeDetector" in window)) {
-          setScannerStatus("Leitor QR não suportado neste browser. Usa Chrome no telemóvel.");
-          return;
-        }
+        const canUseBarcodeDetector = "BarcodeDetector" in window;
+        const detector = canUseBarcodeDetector
+          ? new window.BarcodeDetector({ formats: ["qr_code"] })
+          : null;
 
-        const detector = new window.BarcodeDetector({ formats: ["qr_code"] });
-        setScannerStatus("Aponta a câmara para o QR code...");
+        const canvas = document.createElement("canvas");
+        const context = canvas.getContext("2d", { willReadFrequently: true });
+
+        setScannerStatus(
+          canUseBarcodeDetector
+            ? "Aponta a câmara para o QR code..."
+            : "A usar modo compatível de leitura QR..."
+        );
 
         const interval = window.setInterval(async () => {
           if (scanLockRef.current || !videoRef.current) return;
           try {
-            const results = await detector.detect(videoRef.current);
-            if (!results?.length) return;
+            let rawValue = "";
 
-            const rawValue = results[0]?.rawValue || "";
+            if (detector) {
+              const results = await detector.detect(videoRef.current);
+              rawValue = results?.[0]?.rawValue || "";
+            } else if (context) {
+              const video = videoRef.current;
+              if (!video.videoWidth || !video.videoHeight) return;
+
+              canvas.width = video.videoWidth;
+              canvas.height = video.videoHeight;
+              context.drawImage(video, 0, 0, canvas.width, canvas.height);
+              const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+              const code = jsQR(imageData.data, imageData.width, imageData.height, {
+                inversionAttempts: "dontInvert"
+              });
+              rawValue = code?.data || "";
+            }
+
             if (!rawValue) return;
 
             scanLockRef.current = true;
