@@ -176,6 +176,51 @@ router.get("/:slug/dashboard", async (req, res) => {
   });
 });
 
+router.patch("/:slug/profile", upload.single("cv"), async (req, res) => {
+  const { token } = req.query;
+  const student = await Student.findOne({ slug: req.params.slug });
+
+  if (!student) {
+    return res.status(404).json({ message: "Perfil não encontrado" });
+  }
+
+  if (!token || token !== student.accessToken) {
+    return res.status(403).json({ message: "Acesso inválido" });
+  }
+
+  const linkedin = normalizeLinkedin(req.body?.linkedinUrl || "");
+  if (linkedin && !/^https?:\/\//i.test(linkedin)) {
+    return res.status(400).json({ message: "LinkedIn inválido" });
+  }
+
+  if (req.file && req.file.mimetype !== "application/pdf") {
+    return res.status(400).json({ message: "O CV deve estar em PDF" });
+  }
+
+  student.linkedinUrl = linkedin;
+
+  if (req.file) {
+    student.cv = {
+      data: req.file.buffer,
+      contentType: req.file.mimetype,
+      fileName: req.file.originalname,
+      size: req.file.size
+    };
+  }
+
+  await student.save();
+
+  return res.json({
+    student: {
+      slug: student.slug,
+      name: student.name,
+      institutionalEmail: student.institutionalEmail,
+      linkedinUrl: student.linkedinUrl || "",
+      hasCv: Boolean(student.cv?.data)
+    }
+  });
+});
+
 router.post("/:slug/scan", requireCompanyAuth, async (req, res) => {
   const student = await Student.findOne({ slug: req.params.slug }).select("_id");
   if (!student) {

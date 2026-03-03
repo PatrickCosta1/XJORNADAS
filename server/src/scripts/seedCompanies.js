@@ -5,25 +5,46 @@ import { Company } from "../models/Company.js";
 
 const DEFAULT_COMPANIES = [
   {
-    name: "Critical Manufacturing",
-    email: "rh@criticalmanufacturing.com",
+    name: "INEGI",
+    email: "inegi@inegi.up.pt",
     password: "empresa12345",
-    websiteUrl: "https://share.google/NYqzLvmMglI0LOrPJ",
-    logoUrl: "https://www.ats-global.com/wp-content/uploads/2021/07/ATS_Partner_Critical_Manufacturing_logo.png"
+    websiteUrl: "https://www.inegi.pt/pt/",
+    logoUrl: "https://ani.pt/wp-content/uploads/2024/03/INEGI_00238_15-G02Q49_00-logo-inegi-slogan.png"
   },
   {
-    name: "Bosch",
-    email: "talent@bosch.com",
+    name: "Tlantic",
+    email: "info@tlantic.com",
     password: "empresa12345",
-    websiteUrl: "https://share.google/ns99mSWHIyxiCS9WO",
-    logoUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/16/Bosch-logo.svg/1280px-Bosch-logo.svg.png"
+    websiteUrl: "https://www.tlantic.com/",
+    logoUrl: "https://www.isep.ipp.pt/images/JES_IX/tlantic.png"
   },
   {
-    name: "Blip",
-    email: "careers@blip.pt",
+    name: "Glintt Global",
+    email: "info@glinttglobal.com",
     password: "empresa12345",
-    websiteUrl: "https://share.google/o0vQrttlscsarizj3",
-    logoUrl: "https://custom-images.strikinglycdn.com/res/hrscywv4p/image/upload/c_limit,fl_lossy,h_1440,w_720,f_auto,q_auto/9310/20907_615624.png"
+    websiteUrl: "https://glinttglobal.com/en/",
+    logoUrl: "https://cotecportugal.pt/wp-content/uploads/2020/01/GG_logoV_WM_NAVY_RGB_ASS.png"
+  },
+  {
+    name: "Delloite",
+    email: "",
+    password: "empresa12345",
+    websiteUrl: "https://www.deloitte.com/pt/pt.html",
+    logoUrl: "https://cotecportugal.pt/wp-content/uploads/2020/01/DEL_PRI_RGB.png"
+  },
+  {
+    name: "Mecwide SA",
+    email: "geral@mecwide.com",
+    password: "empresa12345",
+    websiteUrl: "https://mecwide.com/en/",
+    logoUrl: "https://mecwide.com/wp-content/uploads/2021/03/logo-mecwide-300x79.png"
+  },
+  {
+    name: "Liderteam",
+    email: "",
+    password: "empresa12345",
+    websiteUrl: "https://liderteam.pt/",
+    logoUrl: "https://liderteam.pt/cdn/shop/files/Liderteam-_-Consultoria-em-Transformacao-Digital-e-ERP-em-Portugal.png?v=1766063671"
   }
 ];
 

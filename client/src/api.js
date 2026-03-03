@@ -32,6 +32,17 @@ export async function getStudentDashboard(slug, token) {
   return parseResponse(response);
 }
 
+export async function updateStudentProfile(slug, token, formData) {
+  const response = await fetch(
+    `${API_URL}/students/${slug}/profile?token=${encodeURIComponent(token || "")}`,
+    {
+      method: "PATCH",
+      body: formData
+    }
+  );
+  return parseResponse(response);
+}
+
 export async function companyLogin(payload) {
   const response = await fetch(`${API_URL}/company/auth/login`, {
     method: "POST",

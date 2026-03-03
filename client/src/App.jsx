@@ -7,7 +7,8 @@ import {
   getCompanyDashboard,
   getStudentDashboard,
   getStudentPublic,
-  registerScan
+  registerScan,
+  updateStudentProfile
 } from "./api";
 
 const TOTAL_STEPS = 4;
@@ -22,8 +23,15 @@ export default function App() {
   const [routeError, setRouteError] = useState("");
   const [publicProfile, setPublicProfile] = useState(null);
   const [dashboardData, setDashboardData] = useState(null);
+  const [dashboardLinkedinInput, setDashboardLinkedinInput] = useState("");
+  const [dashboardCvFile, setDashboardCvFile] = useState(null);
+  const [dashboardSaving, setDashboardSaving] = useState(false);
+  const [dashboardFeedback, setDashboardFeedback] = useState("");
 
   const [started, setStarted] = useState(false);
+  const [landingStep, setLandingStep] = useState("choice");
+  const [mecanographicNumber, setMecanographicNumber] = useState("");
+  const [mecanographicFeedback, setMecanographicFeedback] = useState("");
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -50,12 +58,22 @@ export default function App() {
   const [cvFile, setCvFile] = useState(null);
 
   const progress = useMemo(() => Math.round((step / TOTAL_STEPS) * 100), [step]);
+  const isLandingIntro = routeMode === "landing" && !started;
+  const isLandingAccess = routeMode === "landing" && started && (landingStep === "choice" || landingStep === "login");
+  const isLandingEnrollment = routeMode === "landing" && started;
+  const isVerticallyCenteredFlow = isLandingEnrollment || routeMode === "company";
 
   function getDomainFromEmail(email) {
     const value = String(email || "").trim().toLowerCase();
     const atIndex = value.lastIndexOf("@");
     if (atIndex <= 0) return "";
     return value.slice(atIndex + 1);
+  }
+
+  function getFirstName(fullName) {
+    const value = String(fullName || "").trim();
+    if (!value) return "";
+    return value.split(/\s+/)[0] || "";
   }
 
   function getCompanyWebsite(company) {
@@ -72,7 +90,7 @@ export default function App() {
     if (domain) {
       return `https://www.google.com/s2/favicons?sz=128&domain=${encodeURIComponent(domain)}`;
     }
-    return `https://ui-avatars.com/api/?name=${encodeURIComponent(company?.name || "Empresa")}&background=d34600&color=fff`;
+    return `https://ui-avatars.com/api/?name=${encodeURIComponent(company?.name || "Empresa")}&background=2f71ff&color=fff`;
   }
 
   function readStoredSession() {
@@ -195,6 +213,10 @@ export default function App() {
       setRouteSlug("");
       setRouteToken("");
       setCompanyToken("");
+      setStarted(false);
+      setLandingStep("choice");
+      setMecanographicNumber("");
+      setMecanographicFeedback("");
     };
 
     resolveRoute();
@@ -255,6 +277,13 @@ export default function App() {
       active = false;
     };
   }, [routeMode, routeSlug, routeToken]);
+
+  useEffect(() => {
+    if (routeMode !== "dashboard" || !dashboardData?.student) return;
+    setDashboardLinkedinInput(dashboardData.student.linkedinUrl || "");
+    setDashboardCvFile(null);
+    setDashboardFeedback("");
+  }, [routeMode, dashboardData]);
 
   async function refreshStudentDashboard() {
     if (routeMode !== "dashboard" || !routeSlug || !routeToken) return;
@@ -535,20 +564,170 @@ export default function App() {
     refreshStudentDashboard();
   }
 
+  function handleLandingLoginSubmit(event) {
+    event.preventDefault();
+    const value = mecanographicNumber.trim();
+    if (!value) {
+      setMecanographicFeedback("Indica o número mecanográfico.");
+      return;
+    }
+    setMecanographicFeedback("Entrada por número mecanográfico ainda não está disponível.");
+  }
+
+  async function handleDashboardProfileSubmit(event) {
+    event.preventDefault();
+    if (routeMode !== "dashboard" || !routeSlug || !routeToken || !dashboardData?.student) return;
+
+    setDashboardSaving(true);
+    setDashboardFeedback("");
+
+    try {
+      const formData = new FormData();
+      formData.append("linkedinUrl", dashboardLinkedinInput.trim());
+      if (dashboardCvFile) {
+        formData.append("cv", dashboardCvFile);
+      }
+
+      const result = await updateStudentProfile(routeSlug, routeToken, formData);
+
+      setDashboardData((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          student: {
+            ...prev.student,
+            ...result.student
+          }
+        };
+      });
+
+      setDashboardCvFile(null);
+      setDashboardFeedback("Perfil atualizado.");
+    } catch (err) {
+      setDashboardFeedback(err.message || "Não foi possível atualizar os dados.");
+    } finally {
+      setDashboardSaving(false);
+    }
+  }
+
   return (
-    <div className="welcome-shell">
+    <div className={`welcome-shell ${isVerticallyCenteredFlow ? "welcome-shell--centered-flow" : ""}`}>
       {/* Elementos decorativos de fundo */}
       <div className="bg-gradient" />
       <div className="blob blob-1" />
       <div className="blob blob-2" />
 
-      <header className="welcome-header">
-        <img src="/logo-nes.png" alt="Logo NES" className="welcome-logo" />
-      </header>
+      <main
+        className={`welcome-content ${isLandingIntro ? "welcome-content--hero" : ""} ${isLandingAccess ? "welcome-content--access" : ""} ${isLandingEnrollment ? "welcome-content--enrollment" : ""}`}
+      >
+        {isLandingIntro ? (
+          <section className="landing-hero">
+            <img
+              src="/letreirones.png"
+              alt="X Jornadas de Engenharia de Sistemas"
+              className="landing-title-image"
+            />
 
-      <main className="welcome-content">
-        <div className="glass-card">
-          {routeMode === "public" ? (
+            <img src="/grafismojornadas.png" alt="Grafismo Jornadas" className="landing-graphic" />
+
+            <div className="landing-cta">
+              <img src="/logo-nes.png" alt="" aria-hidden="true" className="start-button-logo" />
+              <button
+                type="button"
+                className="start-button start-button--landing"
+                onClick={() => {
+                  setStarted(true);
+                  setLandingStep("choice");
+                  setMecanographicNumber("");
+                  setMecanographicFeedback("");
+                }}
+              >
+                <span>
+                  <strong>Start</strong> Engineering
+                </span>
+              </button>
+            </div>
+          </section>
+        ) : isLandingAccess ? (
+          landingStep === "choice" ? (
+            <section className="access-screen">
+              <img
+                src="/letreirones.png"
+                alt="X Jornadas de Engenharia de Sistemas"
+                className="access-title-image"
+              />
+
+              <div className="access-choice">
+                <div className="entry-option">
+                  <button
+                    type="button"
+                    className="start-button"
+                    onClick={() => {
+                      setLandingStep("login");
+                      setMecanographicFeedback("");
+                    }}
+                  >
+                    Entrar
+                  </button>
+                  <p className="entry-hint">se já te inscreveste</p>
+                </div>
+
+                <div className="entry-option">
+                  <button
+                    type="button"
+                    className="secondary-button"
+                    onClick={() => {
+                      setLandingStep("register");
+                      setStep(1);
+                      setError("");
+                      setMecanographicFeedback("");
+                    }}
+                  >
+                    Inscrever-se
+                  </button>
+                  <p className="entry-hint">se ainda não te inscreveste.</p>
+                </div>
+              </div>
+            </section>
+          ) : (
+            <section className="access-screen access-screen--login">
+              <h2 className="form-title">Entrar</h2>
+              <p className="form-subtitle">Indica o teu número mecanográfico.</p>
+
+              <form className="access-login-form" onSubmit={handleLandingLoginSubmit}>
+                <label className="field">
+                  Número mecanográfico
+                  <input
+                    autoFocus
+                    value={mecanographicNumber}
+                    onChange={(e) => setMecanographicNumber(e.target.value)}
+                    placeholder="Ex.: 1241234"
+                  />
+                </label>
+
+                {mecanographicFeedback ? <p className="form-subtitle access-note">{mecanographicFeedback}</p> : null}
+
+                <div className="entry-actions">
+                  <button
+                    type="button"
+                    className="secondary-button"
+                    onClick={() => {
+                      setLandingStep("choice");
+                      setMecanographicFeedback("");
+                    }}
+                  >
+                    Voltar
+                  </button>
+                  <button type="submit" className="start-button">
+                    Entrar
+                  </button>
+                </div>
+              </form>
+            </section>
+          )
+        ) : (
+          <div className={`glass-card ${(routeMode === "dashboard" || routeMode === "company") ? "glass-card--dashboard" : ""}`}>
+            {routeMode === "public" ? (
             <section className="form-flow">
               <span className="event-badge">Perfil público</span>
               {routeLoading ? <p>A carregar perfil...</p> : null}
@@ -581,37 +760,85 @@ export default function App() {
               ) : null}
             </section>
           ) : routeMode === "dashboard" ? (
-            <section className="form-flow">
-              <span className="event-badge">Homepage</span>
+            <section className="form-flow dashboard-flow">
               {routeLoading ? <p>A carregar dashboard...</p> : null}
               {routeError ? <p className="error-text">{routeError}</p> : null}
 
               {dashboardData ? (
                 <>
-                  <h2 className="form-title">Olá, {dashboardData.student?.name}</h2>
-                  <p className="form-subtitle">O teu espaço das Jornadas.</p>
+                  <article className="dashboard-card dashboard-card--intro">
+                    <h2 className="dashboard-title">
+                      <span>Olá, </span>
+                      <strong>@{getFirstName(dashboardData.student?.name)}</strong>
+                    </h2>
+                    <p className="dashboard-email">{dashboardData.student?.institutionalEmail}</p>
+                  </article>
 
-                  <div className="home-grid">
-                    <article className="stat-card">
-                      <small>Total de leituras</small>
-                      <strong>{dashboardData.scans?.length || 0}</strong>
-                    </article>
-                    <article className="stat-card">
-                      <small>Email</small>
-                      <strong>{dashboardData.student?.institutionalEmail}</strong>
-                    </article>
-                    <article className="stat-card">
-                      <small>LinkedIn</small>
-                      <strong>{dashboardData.student?.linkedinUrl ? "Configurado" : "Não definido"}</strong>
-                    </article>
-                    <article className="stat-card">
-                      <small>CV</small>
-                      <strong>{dashboardData.student?.hasCv ? "Disponível" : "Não carregado"}</strong>
-                    </article>
-                  </div>
+                  <article className="dashboard-card dashboard-card--reads">
+                    <small className="dashboard-reads-label">Total de leituras</small>
+                    <strong className="dashboard-reads-count">{dashboardData.scans?.length || 0}</strong>
+                  </article>
+
+                  <article className="dashboard-card">
+                    <p className="list-title">LinkedIn e CV</p>
+
+                    <div className="dashboard-links">
+                      {dashboardData.student?.linkedinUrl ? (
+                        <a
+                          className="secondary-button compact-button"
+                          href={dashboardData.student.linkedinUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          Abrir LinkedIn
+                        </a>
+                      ) : (
+                        <p className="form-subtitle">Sem LinkedIn configurado.</p>
+                      )}
+
+                      {dashboardData.student?.hasCv ? (
+                        <a
+                          className="secondary-button compact-button"
+                          href={`${apiUrl}/students/${dashboardData.student.slug}/cv`}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          Ver CV
+                        </a>
+                      ) : (
+                        <p className="form-subtitle">Sem CV carregado.</p>
+                      )}
+                    </div>
+
+                    <form className="dashboard-edit-form" onSubmit={handleDashboardProfileSubmit}>
+                      <label className="field">
+                        LinkedIn (opcional)
+                        <input
+                          value={dashboardLinkedinInput}
+                          onChange={(e) => setDashboardLinkedinInput(e.target.value)}
+                          placeholder="linkedin.com/in/teu-perfil"
+                        />
+                      </label>
+
+                      <label className="field">
+                        CV em PDF (opcional)
+                        <input
+                          type="file"
+                          accept="application/pdf"
+                          onChange={(e) => setDashboardCvFile(e.target.files?.[0] || null)}
+                        />
+                      </label>
+
+                      {dashboardFeedback ? <p className="form-subtitle access-note">{dashboardFeedback}</p> : null}
+
+                      <button type="submit" className="start-button" disabled={dashboardSaving}>
+                        {dashboardSaving ? "A guardar..." : "Guardar alterações"}
+                      </button>
+                    </form>
+                  </article>
 
                   {(dashboardData.scans?.length || 0) > 0 ? (
-                    <>
+                    <article className="dashboard-card">
                       <p className="list-title">Últimas empresas que fizeram leitura</p>
                       <div className="company-feed-grid">
                         {dashboardData.scans.slice(0, 4).map((scan) => (
@@ -647,19 +874,22 @@ export default function App() {
                       {dashboardData.scans.length > 4 ? (
                         <p className="form-subtitle">+ {dashboardData.scans.length - 4} leituras adicionais</p>
                       ) : null}
-                    </>
-                  ) : (
-                    <p className="form-subtitle">Ainda não há leituras registadas.</p>
-                  )}
+                    </article>
+                  ) : null}
                 </>
               ) : null}
             </section>
           ) : routeMode === "company" ? (
-            <section className="form-flow">
+            <section className="form-flow company-flow">
               <span className="event-badge">Empresas</span>
 
               {!companyToken ? (
-                <form className="form-flow" onSubmit={handleCompanyLogin}>
+                <form className="form-flow company-flow company-login-flow" onSubmit={handleCompanyLogin}>
+                  <img
+                    src="/grafismojornadas.png"
+                    alt="Grafismo Jornadas"
+                    className="company-graphic-image"
+                  />
                   <h2 className="form-title">Login empresa</h2>
                   <p className="form-subtitle">Acesso para empresas pré-configuradas.</p>
 
@@ -760,20 +990,8 @@ export default function App() {
                 </>
               )}
             </section>
-          ) : !started ? (
-            <>
-              <span className="event-badge">Uma década de inovação</span>
-              <h1>
-                Bem-Vindo à <br />
-                <span>X Jornadas de Sistemas</span>
-              </h1>
-              <p>Explora o futuro da tecnologia e inovação conosco.</p>
-              <button type="button" className="start-button" onClick={() => setStarted(true)}>
-                Começar
-              </button>
-            </>
           ) : (
-            <section className="form-flow">
+              <section className="form-flow">
               <div className="progress-head">
                 <span className="event-badge">Registo de aluno</span>
                 <small>Passo {step} de {TOTAL_STEPS}</small>
@@ -803,7 +1021,7 @@ export default function App() {
                     type="email"
                     value={institutionalEmail}
                     onChange={(e) => setInstitutionalEmail(e.target.value)}
-                    placeholder="upxxxxxxx@isep.ipp.pt"
+                    placeholder="1111111@isep.ipp.pt"
                   />
                 </label>
               ) : null}
@@ -849,9 +1067,10 @@ export default function App() {
                   </button>
                 )}
               </div>
-            </section>
-          )}
-        </div>
+              </section>
+            )}
+          </div>
+        )}
       </main>
 
       {routeMode === "dashboard" && dashboardData?.qrCodeDataUrl ? (
@@ -894,6 +1113,9 @@ export default function App() {
           <div className="modal-card" onClick={(e) => e.stopPropagation()}>
             <span className="event-badge">QR code</span>
             <h3>{dashboardData.student?.name}</h3>
+            <p className="qr-total-reads">
+              Total de leituras: <strong>{dashboardData.scans?.length || 0}</strong>
+            </p>
             <img src={dashboardData.qrCodeDataUrl} alt="QR code do aluno" className="qr-preview" />
             <button type="button" className="secondary-button" onClick={closeStudentQrPopup}>
               Fechar
