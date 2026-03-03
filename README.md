@@ -72,9 +72,18 @@ Existe validação por ficheiro `presencas.csv`.
 Fluxo:
 
 - No botão **Entrar**, o aluno indica o nº mecanográfico
-- A API valida no Excel (`POST /api/students/enrollment-lookup`)
+- A API valida no CSV (`POST /api/students/enrollment-lookup`)
 - Se encontrado, preenche automaticamente `nome`
 - O aluno avança para os passos de LinkedIn/CV e criação do QR
+
+### Contabilização de presenças
+
+O backend regista presenças na coleção `presences` (MongoDB):
+
+- Entrada por nº mecanográfico encontrado no CSV (`csv_lookup`)
+- Inscrição manual de aluno que não existe no CSV (`manual_registration`)
+
+Campos principais: `institutionalEmail`, `name`, `mecanographicNumber`, `totalEntries`, `lastEntryType`, `firstSeenAt`, `lastSeenAt`.
 
 ### Variáveis necessárias no backend (`server/.env`)
 
@@ -99,6 +108,16 @@ Configuração correta para a API:
 - Definir no Render todas as variáveis do `server/.env` (incluindo as de CSV)
 
 Opcional: usar `render.yaml` deste repositório para criar o serviço já com `rootDir: server`.
+
+### Keep-alive (evitar sleep por inatividade)
+
+Está incluído no `render.yaml` um serviço `cron` chamado `jornadas26-keepalive` que executa a cada 10 minutos e faz um ping à API.
+
+No Render, no serviço cron, definir:
+
+- `KEEPALIVE_URL=https://<teu-servico-api>.onrender.com/api/health`
+
+> Nota: em planos gratuitos, alguns comportamentos de sleep/cold start podem variar por política da plataforma.
 
 ## Segurança/Notas
 

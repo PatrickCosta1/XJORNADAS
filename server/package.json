@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "nodemon src/index.js",
     "start": "node src/index.js",
-    "seed:companies": "node src/scripts/seedCompanies.js"
+    "seed:companies": "node src/scripts/seedCompanies.js",
+    "keepalive:ping": "node src/scripts/keepAlivePing.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

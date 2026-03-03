@@ -146,3 +146,8 @@ export async function findEnrollmentByMecanographicNumber(mecanographicNumber) {
     institutionalEmail: `${normalizedInput}@${emailDomain}`
   };
 }
+
+export async function isMecanographicInEnrollmentCsv(mecanographicNumber) {
+  const enrollment = await findEnrollmentByMecanographicNumber(mecanographicNumber);
+  return Boolean(enrollment);
+}

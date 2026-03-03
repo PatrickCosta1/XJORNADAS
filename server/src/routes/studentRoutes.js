@@ -8,8 +8,10 @@ import { config } from "../config.js";
 import { requireCompanyAuth } from "../middleware/auth.js";
 import {
   findEnrollmentByMecanographicNumber,
-  isEnrollmentLookupConfigured
+  isEnrollmentLookupConfigured,
+  isMecanographicInEnrollmentCsv
 } from "../services/enrollmentLookup.js";
+import { extractMecanographicFromEmail, trackPresence } from "../services/presenceTracker.js";
 
 const router = express.Router();
 
@@ -62,6 +64,19 @@ router.post("/enrollment-lookup", async (req, res) => {
     return res.status(404).json({ message: "Número mecanográfico não encontrado nas inscrições" });
   }
 
+  try {
+    await trackPresence({
+      name: enrollment.name,
+      institutionalEmail: enrollment.institutionalEmail,
+      mecanographicNumber: enrollment.mecanographicNumber,
+      inEnrollmentCsv: true,
+      entryType: "csv_lookup"
+    });
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error("Falha ao registar presença por CSV", error);
+  }
+
   return res.json({
     found: true,
     student: {
@@ -112,6 +127,33 @@ router.post("/", upload.single("cv"), async (req, res) => {
         }
       : undefined
   });
+
+  const mecanographicFromEmail = extractMecanographicFromEmail(student.institutionalEmail);
+  let existsInCsv = false;
+
+  if (mecanographicFromEmail && isEnrollmentLookupConfigured()) {
+    try {
+      existsInCsv = await isMecanographicInEnrollmentCsv(mecanographicFromEmail);
+    } catch {
+      existsInCsv = false;
+    }
+  }
+
+  if (!existsInCsv) {
+    try {
+      await trackPresence({
+        name: student.name,
+        institutionalEmail: student.institutionalEmail,
+        mecanographicNumber: mecanographicFromEmail,
+        inEnrollmentCsv: false,
+        entryType: "manual_registration",
+        studentId: student._id
+      });
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error("Falha ao registar presença por inscrição manual", error);
+    }
+  }
 
   const publicProfileUrl = getPublicProfileUrl(student.slug);
   const dashboardUrl = getDashboardUrl(student.slug, student.accessToken);

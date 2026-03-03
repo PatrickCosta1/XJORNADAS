@@ -6,3 +6,14 @@ services:
     buildCommand: npm install
     startCommand: npm start
     autoDeploy: true
+
+  - type: cron
+    name: jornadas26-keepalive
+    runtime: node
+    rootDir: server
+    schedule: "*/10 * * * *"
+    buildCommand: npm install
+    startCommand: npm run keepalive:ping
+    envVars:
+      - key: KEEPALIVE_URL
+        sync: false
