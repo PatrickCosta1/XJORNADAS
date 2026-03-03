@@ -1,0 +1,10 @@
+{
+  "name": "jornadas26-root",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "postinstall": "npm --prefix server install",
+    "start": "node server/src/index.js",
+    "dev": "npm --prefix server run dev"
+  }
+}
