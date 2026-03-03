@@ -7,6 +7,7 @@ import {
   getCompanyDashboard,
   getStudentDashboard,
   getStudentPublic,
+  lookupEnrollment,
   registerScan,
   updateStudentProfile
 } from "./api";
@@ -32,6 +33,7 @@ export default function App() {
   const [landingStep, setLandingStep] = useState("choice");
   const [mecanographicNumber, setMecanographicNumber] = useState("");
   const [mecanographicFeedback, setMecanographicFeedback] = useState("");
+  const [landingLoginLoading, setLandingLoginLoading] = useState(false);
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -564,14 +566,38 @@ export default function App() {
     refreshStudentDashboard();
   }
 
-  function handleLandingLoginSubmit(event) {
+  async function handleLandingLoginSubmit(event) {
     event.preventDefault();
     const value = mecanographicNumber.trim();
     if (!value) {
       setMecanographicFeedback("Indica o número mecanográfico.");
       return;
     }
-    setMecanographicFeedback("Entrada por número mecanográfico ainda não está disponível.");
+
+    setLandingLoginLoading(true);
+    setMecanographicFeedback("");
+
+    try {
+      const result = await lookupEnrollment(value);
+      const student = result?.student;
+
+      if (!student?.name || !student?.institutionalEmail) {
+        setMecanographicFeedback("Inscrição encontrada, mas sem dados suficientes (nome/email).");
+        return;
+      }
+
+      setName(student.name);
+      setInstitutionalEmail(student.institutionalEmail);
+      setLinkedinUrl("");
+      setCvFile(null);
+      setError("");
+      setStep(3);
+      setLandingStep("register");
+    } catch (err) {
+      setMecanographicFeedback(err.message || "Não foi possível validar a inscrição agora.");
+    } finally {
+      setLandingLoginLoading(false);
+    }
   }
 
   async function handleDashboardProfileSubmit(event) {
@@ -702,6 +728,7 @@ export default function App() {
                     value={mecanographicNumber}
                     onChange={(e) => setMecanographicNumber(e.target.value)}
                     placeholder="Ex.: 1241234"
+                    disabled={landingLoginLoading}
                   />
                 </label>
 
@@ -711,6 +738,7 @@ export default function App() {
                   <button
                     type="button"
                     className="secondary-button"
+                    disabled={landingLoginLoading}
                     onClick={() => {
                       setLandingStep("choice");
                       setMecanographicFeedback("");
@@ -718,8 +746,8 @@ export default function App() {
                   >
                     Voltar
                   </button>
-                  <button type="submit" className="start-button">
-                    Entrar
+                  <button type="submit" className="start-button" disabled={landingLoginLoading}>
+                    {landingLoginLoading ? "A validar..." : "Entrar"}
                   </button>
                 </div>
               </form>

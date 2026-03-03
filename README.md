@@ -65,6 +65,41 @@ Existe endpoint protegido por chave de setup:
 3. Recebe link único da área pessoal (com token) e QR
 4. Pode acompanhar leituras em `/student/:slug/dashboard?token=...`
 
+## Entrar por número mecanográfico (CSV)
+
+Existe validação por ficheiro `presencas.csv`.
+
+Fluxo:
+
+- No botão **Entrar**, o aluno indica o nº mecanográfico
+- A API valida no Excel (`POST /api/students/enrollment-lookup`)
+- Se encontrado, preenche automaticamente `nome`
+- O aluno avança para os passos de LinkedIn/CV e criação do QR
+
+### Variáveis necessárias no backend (`server/.env`)
+
+Definir variáveis abaixo:
+
+- `ENROLLMENTS_CSV_PATH=../presencas.csv`
+- `ENROLLMENTS_MECH_COLUMN=Número mecanográfico`
+- `ENROLLMENTS_NAME_COLUMN=Nome Completo`
+- `ENROLLMENTS_INSTITUTIONAL_EMAIL_DOMAIN=isep.ipp.pt`
+
+> O endpoint infere automaticamente o email institucional no formato `numero@dominio` para manter compatibilidade com o registo atual.
+
+## Deploy no Render (backend)
+
+Se aparecer erro `ENOENT: ... /opt/render/project/src/package.json`, o serviço está a correr na pasta errada.
+
+Configuração correta para a API:
+
+- **Root Directory**: `server`
+- **Build Command**: `npm install`
+- **Start Command**: `npm start`
+- Definir no Render todas as variáveis do `server/.env` (incluindo as de CSV)
+
+Opcional: usar `render.yaml` deste repositório para criar o serviço já com `rootDir: server`.
+
 ## Segurança/Notas
 
 - Email institucional validado por domínio (configurável)

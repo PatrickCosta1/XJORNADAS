@@ -6,6 +6,10 @@ import { Student } from "../models/Student.js";
 import { ScanEvent } from "../models/ScanEvent.js";
 import { config } from "../config.js";
 import { requireCompanyAuth } from "../middleware/auth.js";
+import {
+  findEnrollmentByMecanographicNumber,
+  isEnrollmentLookupConfigured
+} from "../services/enrollmentLookup.js";
 
 const router = express.Router();
 
@@ -41,6 +45,32 @@ function getDashboardUrl(slug, token) {
   const base = String(config.appBaseUrl || "").replace(/\/+$/, "");
   return `${base}/student/${slug}/dashboard?token=${token}`;
 }
+
+router.post("/enrollment-lookup", async (req, res) => {
+  const mecanographicNumber = String(req.body?.mecanographicNumber || "").trim();
+
+  if (!mecanographicNumber) {
+    return res.status(400).json({ message: "Indica o número mecanográfico" });
+  }
+
+  if (!isEnrollmentLookupConfigured()) {
+    return res.status(503).json({ message: "Validação de inscrições indisponível" });
+  }
+
+  const enrollment = await findEnrollmentByMecanographicNumber(mecanographicNumber);
+  if (!enrollment) {
+    return res.status(404).json({ message: "Número mecanográfico não encontrado nas inscrições" });
+  }
+
+  return res.json({
+    found: true,
+    student: {
+      mecanographicNumber: enrollment.mecanographicNumber,
+      name: enrollment.name,
+      institutionalEmail: enrollment.institutionalEmail
+    }
+  });
+});
 
 router.post("/", upload.single("cv"), async (req, res) => {
   const { name, institutionalEmail, linkedinUrl } = req.body;

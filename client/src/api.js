@@ -20,6 +20,15 @@ export async function createStudentProfile(formData) {
   return parseResponse(response);
 }
 
+export async function lookupEnrollment(mecanographicNumber) {
+  const response = await fetch(`${API_URL}/students/enrollment-lookup`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ mecanographicNumber })
+  });
+  return parseResponse(response);
+}
+
 export async function getStudentPublic(slug) {
   const response = await fetch(`${API_URL}/students/${slug}`);
   return parseResponse(response);

@@ -13,4 +13,11 @@ export const config = {
     .split(",")
     .map((d) => d.trim().toLowerCase())
     .filter(Boolean)
+  ,
+  enrollmentLookup: {
+    csvPath: process.env.ENROLLMENTS_CSV_PATH || "../presencas.csv",
+    mecanographicColumn: process.env.ENROLLMENTS_MECH_COLUMN || "",
+    nameColumn: process.env.ENROLLMENTS_NAME_COLUMN || "",
+    institutionalEmailDomain: process.env.ENROLLMENTS_INSTITUTIONAL_EMAIL_DOMAIN || "isep.ipp.pt"
+  }
 };
