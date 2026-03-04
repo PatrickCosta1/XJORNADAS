@@ -139,20 +139,18 @@ router.post("/", upload.single("cv"), async (req, res) => {
     }
   }
 
-  if (!existsInCsv) {
-    try {
-      await trackPresence({
-        name: student.name,
-        institutionalEmail: student.institutionalEmail,
-        mecanographicNumber: mecanographicFromEmail,
-        inEnrollmentCsv: false,
-        entryType: "manual_registration",
-        studentId: student._id
-      });
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error("Falha ao registar presença por inscrição manual", error);
-    }
+  try {
+    await trackPresence({
+      name: student.name,
+      institutionalEmail: student.institutionalEmail,
+      mecanographicNumber: mecanographicFromEmail,
+      inEnrollmentCsv: existsInCsv,
+      entryType: "manual_registration",
+      studentId: student._id
+    });
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error("Falha ao registar presença por inscrição manual", error);
   }
 
   const publicProfileUrl = getPublicProfileUrl(student.slug);
