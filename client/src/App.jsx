@@ -87,6 +87,12 @@ export default function App() {
     return explicitWebsite;
   }
 
+  function getSafeWebsiteUrl(websiteUrl) {
+    const value = String(websiteUrl || "").trim();
+    if (!value) return "";
+    return /^https?:\/\//i.test(value) ? value : `https://${value}`;
+  }
+
   function getCompanyLogo(company) {
     const explicitLogo = String(company?.logoUrl || "").trim();
     if (explicitLogo) return explicitLogo;
@@ -887,7 +893,7 @@ export default function App() {
                             {getCompanyWebsite(scan.company) ? (
                               <a
                                 className="secondary-button compact-button"
-                                href={getCompanyWebsite(scan.company)}
+                                href={getSafeWebsiteUrl(getCompanyWebsite(scan.company))}
                                 target="_blank"
                                 rel="noreferrer"
                               >
@@ -921,7 +927,7 @@ export default function App() {
                     className="company-graphic-image"
                   />
                   <h2 className="form-title">Login empresa</h2>
-                  <p className="form-subtitle">Acesso para empresas pré-configuradas.</p>
+                  <p className="form-subtitle">Acesso para empresas.</p>
 
                   <label className="field">
                     Nome da empresa
@@ -960,6 +966,29 @@ export default function App() {
                     <article className="stat-card">
                       <small>Total de QR lidos</small>
                       <strong>{companyData?.scans?.length || 0}</strong>
+                    </article>
+                    <article className="stat-card">
+                      <small>Website</small>
+                      {getCompanyWebsite(companyData?.company) ? (
+                        <a
+                          className="secondary-button compact-button"
+                          href={getSafeWebsiteUrl(getCompanyWebsite(companyData?.company))}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          Visitar site
+                        </a>
+                      ) : (
+                        <strong>-</strong>
+                      )}
+                    </article>
+                    <article className="stat-card">
+                      <small>Última leitura</small>
+                      <strong>
+                        {companyData?.scans?.[0]?.scannedAt
+                          ? new Date(companyData.scans[0].scannedAt).toLocaleString("pt-PT")
+                          : "-"}
+                      </strong>
                     </article>
                   </div>
 
