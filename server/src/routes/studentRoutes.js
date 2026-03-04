@@ -259,7 +259,31 @@ router.patch("/:slug/profile", upload.single("cv"), async (req, res) => {
     return res.status(403).json({ message: "Acesso inválido" });
   }
 
+  const nameInput = req.body?.name;
+  const institutionalEmailInput = req.body?.institutionalEmail;
   const linkedin = normalizeLinkedin(req.body?.linkedinUrl || "");
+
+  if (nameInput !== undefined) {
+    const normalizedName = String(nameInput).trim();
+    if (!normalizedName) {
+      return res.status(400).json({ message: "Nome é obrigatório" });
+    }
+    student.name = normalizedName;
+  }
+
+  if (institutionalEmailInput !== undefined) {
+    const normalizedEmail = String(institutionalEmailInput).toLowerCase().trim();
+    if (!normalizedEmail) {
+      return res.status(400).json({ message: "Email institucional é obrigatório" });
+    }
+    if (!isAllowedInstitutionalEmail(normalizedEmail)) {
+      return res.status(400).json({
+        message: `O email deve pertencer a: ${config.allowedStudentEmailDomains.join(", ")}`
+      });
+    }
+    student.institutionalEmail = normalizedEmail;
+  }
+
   if (linkedin && !/^https?:\/\//i.test(linkedin)) {
     return res.status(400).json({ message: "LinkedIn inválido" });
   }

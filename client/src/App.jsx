@@ -24,6 +24,8 @@ export default function App() {
   const [routeError, setRouteError] = useState("");
   const [publicProfile, setPublicProfile] = useState(null);
   const [dashboardData, setDashboardData] = useState(null);
+  const [dashboardNameInput, setDashboardNameInput] = useState("");
+  const [dashboardEmailInput, setDashboardEmailInput] = useState("");
   const [dashboardLinkedinInput, setDashboardLinkedinInput] = useState("");
   const [dashboardCvFile, setDashboardCvFile] = useState(null);
   const [dashboardSaving, setDashboardSaving] = useState(false);
@@ -33,6 +35,7 @@ export default function App() {
   const [landingStep, setLandingStep] = useState("choice");
   const [mecanographicNumber, setMecanographicNumber] = useState("");
   const [mecanographicFeedback, setMecanographicFeedback] = useState("");
+  const [mecanographicNotFound, setMecanographicNotFound] = useState(false);
   const [landingLoginLoading, setLandingLoginLoading] = useState(false);
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -290,6 +293,8 @@ export default function App() {
 
   useEffect(() => {
     if (routeMode !== "dashboard" || !dashboardData?.student) return;
+    setDashboardNameInput(dashboardData.student.name || "");
+    setDashboardEmailInput(dashboardData.student.institutionalEmail || "");
     setDashboardLinkedinInput(dashboardData.student.linkedinUrl || "");
     setDashboardCvFile(null);
     setDashboardFeedback("");
@@ -579,11 +584,13 @@ export default function App() {
     const value = mecanographicNumber.trim();
     if (!value) {
       setMecanographicFeedback("Indica o número mecanográfico.");
+      setMecanographicNotFound(false);
       return;
     }
 
     setLandingLoginLoading(true);
     setMecanographicFeedback("");
+    setMecanographicNotFound(false);
 
     try {
       const result = await lookupEnrollment(value);
@@ -602,7 +609,15 @@ export default function App() {
       setStep(3);
       setLandingStep("register");
     } catch (err) {
-      setMecanographicFeedback(err.message || "Não foi possível validar a inscrição agora.");
+      const message = String(err?.message || "");
+      const isNotFound = /não encontrado|nao encontrado/i.test(message);
+      if (isNotFound) {
+        setMecanographicFeedback("Número mecanográfico não encontrado nas inscrições.");
+        setMecanographicNotFound(true);
+      } else {
+        setMecanographicFeedback(message || "Não foi possível validar a inscrição agora.");
+        setMecanographicNotFound(false);
+      }
     } finally {
       setLandingLoginLoading(false);
     }
@@ -612,31 +627,30 @@ export default function App() {
     event.preventDefault();
     if (routeMode !== "dashboard" || !routeSlug || !routeToken || !dashboardData?.student) return;
 
+    const normalizedName = String(dashboardNameInput || "").trim();
+    const normalizedEmail = String(dashboardEmailInput || "").trim();
+    if (!normalizedName || !normalizedEmail) {
+      setDashboardFeedback("Nome e email institucional são obrigatórios.");
+      return;
+    }
+
     setDashboardSaving(true);
     setDashboardFeedback("");
 
     try {
       const formData = new FormData();
+      formData.append("name", normalizedName);
+      formData.append("institutionalEmail", normalizedEmail);
       formData.append("linkedinUrl", dashboardLinkedinInput.trim());
       if (dashboardCvFile) {
         formData.append("cv", dashboardCvFile);
       }
 
-      const result = await updateStudentProfile(routeSlug, routeToken, formData);
-
-      setDashboardData((prev) => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          student: {
-            ...prev.student,
-            ...result.student
-          }
-        };
-      });
+      await updateStudentProfile(routeSlug, routeToken, formData);
+      await refreshStudentDashboard();
 
       setDashboardCvFile(null);
-      setDashboardFeedback("Perfil atualizado.");
+      setDashboardFeedback("Perfil e QR atualizados.");
     } catch (err) {
       setDashboardFeedback(err.message || "Não foi possível atualizar os dados.");
     } finally {
@@ -699,6 +713,7 @@ export default function App() {
                     onClick={() => {
                       setLandingStep("login");
                       setMecanographicFeedback("");
+                      setMecanographicNotFound(false);
                     }}
                   >
                     Entrar
@@ -715,6 +730,7 @@ export default function App() {
                       setStep(1);
                       setError("");
                       setMecanographicFeedback("");
+                      setMecanographicNotFound(false);
                     }}
                   >
                     Inscrever-se
@@ -734,13 +750,31 @@ export default function App() {
                   <input
                     autoFocus
                     value={mecanographicNumber}
-                    onChange={(e) => setMecanographicNumber(e.target.value)}
+                    onChange={(e) => {
+                      setMecanographicNumber(e.target.value);
+                      setMecanographicNotFound(false);
+                    }}
                     placeholder="Ex.: 1241234"
                     disabled={landingLoginLoading}
                   />
                 </label>
 
                 {mecanographicFeedback ? <p className="form-subtitle access-note">{mecanographicFeedback}</p> : null}
+
+                {mecanographicNotFound ? (
+                  <button
+                    type="button"
+                    className="secondary-button"
+                    disabled={landingLoginLoading}
+                    onClick={() => {
+                      setLandingStep("register");
+                      setStep(1);
+                      setError("");
+                    }}
+                  >
+                    Inscrever-se agora
+                  </button>
+                ) : null}
 
                 <div className="entry-actions">
                   <button
@@ -750,6 +784,7 @@ export default function App() {
                     onClick={() => {
                       setLandingStep("choice");
                       setMecanographicFeedback("");
+                      setMecanographicNotFound(false);
                     }}
                   >
                     Voltar
@@ -816,7 +851,7 @@ export default function App() {
                   </article>
 
                   <article className="dashboard-card">
-                    <p className="list-title">LinkedIn e CV</p>
+                    <p className="list-title">Dados do perfil</p>
 
                     <div className="dashboard-links">
                       {dashboardData.student?.linkedinUrl ? (
@@ -847,6 +882,25 @@ export default function App() {
                     </div>
 
                     <form className="dashboard-edit-form" onSubmit={handleDashboardProfileSubmit}>
+                      <label className="field">
+                        Nome
+                        <input
+                          value={dashboardNameInput}
+                          onChange={(e) => setDashboardNameInput(e.target.value)}
+                          placeholder="Nome completo"
+                        />
+                      </label>
+
+                      <label className="field">
+                        Email institucional
+                        <input
+                          type="email"
+                          value={dashboardEmailInput}
+                          onChange={(e) => setDashboardEmailInput(e.target.value)}
+                          placeholder="1111111@isep.ipp.pt"
+                        />
+                      </label>
+
                       <label className="field">
                         LinkedIn (opcional)
                         <input

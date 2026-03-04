@@ -87,6 +87,12 @@ const DEFAULT_COMPANIES = [
     password: "Jornadas2026",
     websiteUrl: "https://www.sogrape.pt/",
     logoUrl: "https://cotecportugal.pt/wp-content/uploads/2020/01/Sogrape_main_cmyk_pos-1200x675.png"
+  },
+  {
+    name: "HealthySystems",
+    password: "Jornadas2026",
+    websiteUrl: "https://hltsys.pt/",
+    logoUrl: "https://easyhealth4covid.vohcolab.org/assets/img/healthy_systems.png"
   }
 ];
 
