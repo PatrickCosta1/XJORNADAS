@@ -8,22 +8,19 @@ import { requireCompanyAuth } from "../middleware/auth.js";
 
 const router = express.Router();
 
-function normalizeWebsiteUrl(websiteUrl, email) {
+function normalizeWebsiteUrl(websiteUrl) {
   const trimmed = String(websiteUrl || "").trim();
   if (trimmed) {
     return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
   }
-  const normalizedEmail = String(email || "").toLowerCase().trim();
-  const atIndex = normalizedEmail.lastIndexOf("@");
-  if (atIndex <= 0) return "";
-  return `https://${normalizedEmail.slice(atIndex + 1)}`;
+  return "";
 }
 
-function normalizeLogoUrl(logoUrl, websiteUrl, email, name) {
+function normalizeLogoUrl(logoUrl, websiteUrl, name) {
   const trimmed = String(logoUrl || "").trim();
   if (trimmed) return trimmed;
 
-  const website = normalizeWebsiteUrl(websiteUrl, email);
+  const website = normalizeWebsiteUrl(websiteUrl);
   try {
     const domain = new URL(website).hostname;
     if (domain) {
@@ -42,30 +39,23 @@ router.post("/provision", async (req, res) => {
     return res.status(403).json({ message: "Não autorizado" });
   }
 
-  const { name, email, password, logoUrl, websiteUrl } = req.body;
-  if (!name || !email || !password || password.length < 8) {
+  const { name, password, logoUrl, websiteUrl } = req.body;
+  if (!name || !password || password.length < 8) {
     return res.status(400).json({ message: "Dados inválidos" });
   }
 
-  const exists = await Company.findOne({ email: email.toLowerCase().trim() });
-  if (exists) {
-    return res.status(409).json({ message: "Empresa já existe" });
-  }
-
   const passwordHash = await bcrypt.hash(password, 10);
-  const normalizedWebsiteUrl = normalizeWebsiteUrl(websiteUrl, email);
+  const normalizedWebsiteUrl = normalizeWebsiteUrl(websiteUrl);
   const company = await Company.create({
     name: name.trim(),
-    email: email.toLowerCase().trim(),
     websiteUrl: normalizedWebsiteUrl,
-    logoUrl: normalizeLogoUrl(logoUrl, normalizedWebsiteUrl, email, name),
+    logoUrl: normalizeLogoUrl(logoUrl, normalizedWebsiteUrl, name),
     passwordHash
   });
 
   return res.status(201).json({
     id: company._id,
     name: company.name,
-    email: company.email,
     logoUrl: company.logoUrl || "",
     websiteUrl: company.websiteUrl || ""
   });
@@ -105,7 +95,6 @@ router.post("/auth/login", async (req, res) => {
     company: {
       id: company._id,
       name: company.name,
-      email: company.email,
       logoUrl: company.logoUrl || "",
       websiteUrl: company.websiteUrl || ""
     }
@@ -116,7 +105,6 @@ router.get("/me", requireCompanyAuth, async (req, res) => {
   return res.json({
     id: req.company._id,
     name: req.company.name,
-    email: req.company.email,
     logoUrl: req.company.logoUrl || "",
     websiteUrl: req.company.websiteUrl || ""
   });
@@ -132,7 +120,6 @@ router.get("/dashboard", requireCompanyAuth, async (req, res) => {
     company: {
       id: req.company._id,
       name: req.company.name,
-      email: req.company.email,
       logoUrl: req.company.logoUrl || "",
       websiteUrl: req.company.websiteUrl || ""
     },

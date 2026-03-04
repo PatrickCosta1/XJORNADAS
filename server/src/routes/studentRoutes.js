@@ -212,7 +212,7 @@ router.get("/:slug/dashboard", async (req, res) => {
   }
 
   const scans = await ScanEvent.find({ student: student._id })
-    .populate("company", "name email logoUrl websiteUrl")
+    .populate("company", "name logoUrl websiteUrl")
     .sort({ scannedAt: -1 })
     .limit(500);
 
@@ -239,11 +239,10 @@ router.get("/:slug/dashboard", async (req, res) => {
         ? {
             id: event.company._id,
             name: event.company.name,
-            email: event.company.email,
             logoUrl: event.company.logoUrl || "",
             websiteUrl: event.company.websiteUrl || ""
           }
-        : { id: null, name: "Empresa removida", email: "" }
+        : { id: null, name: "Empresa removida" }
     }))
   });
 });

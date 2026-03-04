@@ -56,7 +56,7 @@ Existe endpoint protegido por chave de setup:
 
 - `POST /api/company/provision`
 - Header obrigatório: `x-setup-key: <ADMIN_SETUP_KEY>`
-- Body: `{ "name": "Empresa X", "email": "hr@empresa.pt", "password": "SenhaForte123" }`
+- Body: `{ "name": "Empresa X", "password": "SenhaForte123" }`
 
 ## Fluxo do aluno
 

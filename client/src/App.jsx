@@ -65,11 +65,15 @@ export default function App() {
   const isLandingEnrollment = routeMode === "landing" && started;
   const isVerticallyCenteredFlow = isLandingEnrollment || routeMode === "company";
 
-  function getDomainFromEmail(email) {
-    const value = String(email || "").trim().toLowerCase();
-    const atIndex = value.lastIndexOf("@");
-    if (atIndex <= 0) return "";
-    return value.slice(atIndex + 1);
+  function getDomainFromWebsite(websiteUrl) {
+    const trimmed = String(websiteUrl || "").trim();
+    if (!trimmed) return "";
+    try {
+      const normalized = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+      return new URL(normalized).hostname || "";
+    } catch {
+      return "";
+    }
   }
 
   function getFirstName(fullName) {
@@ -80,15 +84,13 @@ export default function App() {
 
   function getCompanyWebsite(company) {
     const explicitWebsite = String(company?.websiteUrl || "").trim();
-    if (explicitWebsite) return explicitWebsite;
-    const domain = getDomainFromEmail(company?.email || "");
-    return domain ? `https://${domain}` : "";
+    return explicitWebsite;
   }
 
   function getCompanyLogo(company) {
     const explicitLogo = String(company?.logoUrl || "").trim();
     if (explicitLogo) return explicitLogo;
-    const domain = getDomainFromEmail(company?.email || "");
+    const domain = getDomainFromWebsite(company?.websiteUrl || "");
     if (domain) {
       return `https://www.google.com/s2/favicons?sz=128&domain=${encodeURIComponent(domain)}`;
     }
@@ -958,10 +960,6 @@ export default function App() {
                     <article className="stat-card">
                       <small>Total de QR lidos</small>
                       <strong>{companyData?.scans?.length || 0}</strong>
-                    </article>
-                    <article className="stat-card">
-                      <small>Email</small>
-                      <strong>{companyData?.company?.email || "-"}</strong>
                     </article>
                   </div>
 
